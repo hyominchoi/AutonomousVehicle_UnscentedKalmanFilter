@@ -16,7 +16,7 @@ UKF::UKF() {
   use_laser_ = true;
 
   // if this is false, radar measurements will be ignored (except during init)
-  use_radar_ = true;
+  use_radar_ = false;
 
   // initial state vector
   x_ = VectorXd(5);
@@ -117,30 +117,32 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     return;
   }
   
-  cout << "debug 0" << endl;
+  //cout << "debug 0" << endl;
   double delta_t = (meas_package.timestamp_ - time_us_)/1000000.0;
   time_us_ = meas_package.timestamp_;
-  cout << "debug 1 " << delta_t <<  endl;
-  Prediction(delta_t);
-  
+  //cout << "debug 1 " << delta_t <<  endl;
+
   int test;
-  cin >> test;
-  /*
+  
   if (use_radar_==true && 
       meas_package.sensor_type_ == MeasurementPackage::RADAR) { //convert the prediction to radar space
+    Prediction(delta_t);
     cout << " update radar 1 " << endl; 
-    cin >> test ;  
-    UpdateRadar(meas_package);
 
+    UpdateRadar(meas_package);
+    return;
   }
+  
   else if (use_laser_==true &&
            meas_package.sensor_type_ == MeasurementPackage::LASER) {
     cout << " update lidar 2 " << endl;
-    cin >> test;   
+    Prediction(delta_t);
+    cout << " debug 1 " << endl;
+
     UpdateLidar(meas_package);
+    return;
   }
-  else return;
- */
+
 }
 
 /**
@@ -176,8 +178,10 @@ void UKF::Prediction(double delta_t) {
   Xsig_aug.col(0) = x_aug;
     for (int i = 0; i < n_aug_; i++) {
       Xsig_aug.col(i+1) = x_aug + sqrt(lambda_ + n_aug_) * L.col(i);
-      Xsig_aug.col(i+1+n_aug_) - x_aug -sqrt(lambda_ + n_aug_) * L.col(i);
+      Xsig_aug.col(i+1+n_aug_) = x_aug -sqrt(lambda_ + n_aug_) * L.col(i);
   }
+  
+  cout << "Xsig_aug " << endl << Xsig_aug << endl;
 
   // predict sigma points  
   VectorXd a = VectorXd(n_x_); // first additive term, from integral
@@ -224,7 +228,7 @@ void UKF::Prediction(double delta_t) {
     Xsig_pred_(3,i) = yaw_p;
     Xsig_pred_(4,i) = yawd_p; 
   }
-
+  cout << " Xsig_pred_ " << endl << Xsig_pred_ << endl;
   // predict mean and covariance using predicted sigma points
   // predicted state mean
   x_.fill(0.0);
@@ -260,22 +264,31 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 
   You'll also need to calculate the lidar NIS.
   */
+  
    VectorXd z_pred = VectorXd(2);
+  z_pred.fill(0.0);
    MatrixXd S = MatrixXd(2,2);
+  S.fill(0.0);
    MatrixXd Zsig = MatrixXd(2, 2 * n_aug_ + 1);
+  Zsig.fill(0.0);
    Zsig = Xsig_pred_.topLeftCorner(2, 2 * n_aug_ + 1);
+  cout << "Xsig_pred_ " << endl  << Xsig_pred_ << endl;
+  cout << "Zsig" << endl << Zsig << endl;
    //mean prediction
+  
    for (int i = 0; i < 2 * n_aug_ + 1; ++i) {
      z_pred += weights_(i) * Zsig.col(i);
+     cout << "z_pred " << z_pred << endl;
    }
+  cout << "z_pred " << z_pred << endl;
+  cout << "weights " <<  weights_ << endl;
    // covariance matrix
-  S.fill(0.0);
   for (int i = 0; i < 2 * n_aug_ + 1; i++) {  //2n+1 simga points
       //residual
       VectorXd z_diff = Zsig.col(i) - z_pred;
       
       S += weights_(i) * z_diff * z_diff.transpose();
-      //cout << "S" << "i" << i << endl << S << endl;
+      cout << "S" << "i " << i << endl << S << endl;
   }
   MatrixXd R = MatrixXd(2, 2);
   R <<    std_laspx_* std_laspx_, 0,
@@ -328,6 +341,8 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
  * Updates the state and the state covariance matrix using a radar measurement.
  * @param {MeasurementPackage} meas_package
  */
+
+
 void UKF::UpdateRadar(MeasurementPackage meas_package) {
   /**
   TODO:
@@ -337,6 +352,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 
   You'll also need to calculate the radar NIS.
   */
+  
   // Prediction in Radar Space
   VectorXd z_pred = VectorXd(3);
   MatrixXd S = MatrixXd(3,3);
@@ -395,7 +411,8 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   cout << "R" << endl << R << endl;
   cout << "z_pred" << endl << z_pred << endl; 
   
-  S = S + R; 
+  S = S + R;
+  
   // Update Step
   VectorXd z = VectorXd(n_z);
   z << meas_package.raw_measurements_[0], 
