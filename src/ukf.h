@@ -102,6 +102,9 @@ public:
    * @param meas_package The measurement at k+1
    */
   void UpdateRadar(MeasurementPackage meas_package);
+  
+private:
+  MatrixXd SigmaPointsToRadarSpace(int n_z);
 };
 
 #endif /* UKF_H */
