@@ -111,7 +111,7 @@ int main()
     	  //Push the current estimated x,y positon from the Kalman filter's state vector
         // cout << "main function" << ukf.x_ << endl;
     	  VectorXd estimate(4);
-        cout << "debug 0" << endl;
+        
     	  double p_x = ukf.x_(0);
     	  double p_y = ukf.x_(1);
     	  double v  = ukf.x_(2);
@@ -126,7 +126,7 @@ int main()
     	  estimate(3) = v2;
     	  
     	  estimations.push_back(estimate);
-        cout << "debug 1" << endl;
+        
     	  VectorXd RMSE = tools.CalculateRMSE(estimations, ground_truth);
         json msgJson;
         msgJson["estimate_x"] = p_x;
@@ -136,7 +136,7 @@ int main()
         msgJson["rmse_vx"] = RMSE(2);
         msgJson["rmse_vy"] = RMSE(3);
         auto msg = "42[\"estimate_marker\"," + msgJson.dump() + "]";
-        // std::cout << msg << std::endl;
+        std::cout << msg << std::endl;
         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 	  
       }
