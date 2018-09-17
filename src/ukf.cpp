@@ -23,6 +23,7 @@ UKF::UKF() {
 
   // initial covariance matrix
   P_ = MatrixXd(5, 5);
+  P_.setIdentity();
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
   std_a_ = 2;
@@ -46,27 +47,19 @@ UKF::UKF() {
   // Radar measurement noise standard deviation radius change in m/s
   std_radrd_ = 0.3;
   //DO NOT MODIFY measurement noise values above these are provided by the sensor manufacturer.
-  
-  /**
-  TODO:
-
-  Complete the initialization. See ukf.h for other member properties.
-
-  Hint: one or more values initialized above might be wildly off...
-  */
     
   is_initialized_ = false;
-    
+  // dimension of state vector
   n_x_ = 5;
-    
+  // dimension of augmented state vector
   n_aug_ = 7;
-    
+  // parameter
   lambda_ = 3 - n_aug_;
-    
+  // sigma points prediction matrix
   Xsig_pred_ = MatrixXd(n_x_, n_aug_ * 2 + 1);
-    
+  // time
   time_us_ = 0.;
-    
+
   // set weights
   weights_ = VectorXd(2 * n_aug_ + 1);
   weights_.fill(0.1);
@@ -74,19 +67,22 @@ UKF::UKF() {
   weights_(0) = weight_0;
   for (int i = 1; i < 2 * n_aug_ + 1 ; i++) weights_(i) = 0.5 / (n_aug_ + lambda_);
   
-  P_.setIdentity();
-  
   //ladar measurement noise covariance matrix
   R_ladar_ = MatrixXd(2, 2);
   R_ladar_ << std_laspx_* std_laspx_, 0,
               0, std_laspy_ * std_laspy_ ;
+  
   // radar measurement noise covariance matrix
   R_radar_ = MatrixXd(3, 3);
   R_radar_ << std_radr_* std_radr_, 0, 0,
              0, std_radphi_ * std_radphi_, 0,
              0, 0, std_radrd_*std_radrd_;
   
-  
+  // Augmented state covariance matrix
+  Q_ = MatrixXd(n_aug_, n_aug_);
+  Q_.fill(0.0);
+  Q_(5,5) = std_a_ * std_a_;
+  Q_(6,6) = std_yawdd_ * std_yawdd_;
 }
 
 UKF::~UKF() {}
@@ -161,19 +157,15 @@ void UKF::Prediction(double delta_t) {
   // augmented sigma points generation
   MatrixXd Xsig_aug = MatrixXd(n_aug_, 2 * n_aug_ + 1);
   VectorXd x_aug = VectorXd(n_aug_);
-  MatrixXd P_aug = MatrixXd(n_aug_, n_aug_);
  
   // first 5 elements of x_aug is (px, py, v, yaw, yawdot)
   x_aug.head(5) = x_;
   x_aug(5) = 0;
   x_aug(6) = 0;
 
-  P_aug.fill(0.0);
-  P_aug.topLeftCorner(n_x_, n_x_) = P_;
-  P_aug(5,5) = std_a_ * std_a_;
-  P_aug(6,6) = std_yawdd_ * std_yawdd_;
+  Q_.topLeftCorner(n_x_, n_x_) = P_;
     
-  MatrixXd L = P_aug.llt().matrixL();
+  MatrixXd L = Q_.llt().matrixL();
     
   Xsig_aug.col(0) = x_aug;
     for (int i = 0; i < n_aug_; i++) {

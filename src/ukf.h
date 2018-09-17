@@ -27,6 +27,9 @@ public:
 
   ///* state covariance matrix
   MatrixXd P_;
+  
+  ///* augmented state covariance matrix
+  MatrixXd Q_;
 
   ///* predicted sigma points matrix
   MatrixXd Xsig_pred_;
